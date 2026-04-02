@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# SQLReaper - Generated files
+results/*.txt
+results/*.json
+results/autosave.json
+results/*.md
+results/*.html
+profiles/*.json
+uploads/*
+!uploads/.gitkeep
+
+# Secrets
+*.key
+*.pem
+*.secret
