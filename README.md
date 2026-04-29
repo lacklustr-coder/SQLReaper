@@ -98,6 +98,10 @@ setup.bat
 ```batch
 # Launch the application
 start.bat
+
+# If start.bat closes immediately, try:
+start-simple.bat     # Simplified launcher
+start-debug.bat      # Debug mode with full output
 ```
 
 **Try the Demo:**

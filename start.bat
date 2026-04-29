@@ -2,6 +2,9 @@
 title SQLReaper v2.1 Advanced - Enterprise Penetration Testing Framework
 color 0A
 
+:: Prevent window from closing on error
+setlocal enabledelayedexpansion
+
 echo.
 echo ===============================================================================
 echo   _____ ____    __    ____
@@ -124,7 +127,10 @@ echo ===========================================================================
 echo.
 
 cd /d "%~dp0"
-python sqlmap_gui/app.py
+
+:: Run the app and capture any errors
+python sqlmap_gui/app.py 2>&1
+set APP_EXIT_CODE=%ERRORLEVEL%
 
 if errorlevel 1 (
     echo.
