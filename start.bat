@@ -17,19 +17,37 @@ if errorlevel 1 (
 )
 echo [OK] Python found
 
-:: Check Flask
-python -c "import flask" >nul 2>nul
-if errorlevel 1 (
-    echo [WARN] Flask not found, installing...
-    pip install flask werkzeug
+:: Check if lockfile exists and install from it
+if exist requirements-lock.txt (
+    echo [INFO] Using requirements-lock.txt for reproducible builds
+    python -c "import flask" >nul 2>nul
     if errorlevel 1 (
-        echo [ERROR] Failed to install Flask!
-        pause
-        exit /b 1
+        echo [WARN] Dependencies not found, installing from lockfile...
+        pip install -r requirements-lock.txt
+        if errorlevel 1 (
+            echo [ERROR] Failed to install dependencies!
+            pause
+            exit /b 1
+        )
+        echo [OK] Dependencies installed
+    ) else (
+        echo [OK] Dependencies found
     )
-    echo [OK] Flask installed
 ) else (
-    echo [OK] Flask found
+    echo [INFO] Lockfile not found, using requirements.txt
+    python -c "import flask" >nul 2>nul
+    if errorlevel 1 (
+        echo [WARN] Flask not found, installing...
+        pip install flask werkzeug pystray Pillow
+        if errorlevel 1 (
+            echo [ERROR] Failed to install Flask!
+            pause
+            exit /b 1
+        )
+        echo [OK] Flask installed
+    ) else (
+        echo [OK] Flask found
+    )
 )
 
 :: Check sqlmap (generic check - user should configure in settings)

@@ -54,6 +54,12 @@ A powerful, modern GUI wrapper for [sqlmap](https://github.com/sqlmapproject/sql
 - Proxy configuration
 - Authentication headers
 
+### &#128274; Security
+- Integrated [Aikido](https://www.aikido.dev/) security scanning
+- Automated vulnerability detection
+- Dependency tracking with lockfile
+- OWASP Top 10 compliance monitoring
+
 ## Screenshot
 
 <p align="center">
@@ -67,6 +73,9 @@ A powerful, modern GUI wrapper for [sqlmap](https://github.com/sqlmapproject/sql
 - [sqlmap](https://github.com/sqlmapproject/sqlmap) installed
 - Windows, Linux, or macOS
 
+### Security Note
+SQLReaper includes [Aikido](https://www.aikido.dev/) security scanning for dependency vulnerability monitoring. See [AIKIDO_SETUP.md](AIKIDO_SETUP.md) for setup instructions.
+
 ### Quick Start
 
 **Windows:**
@@ -79,8 +88,11 @@ double-click start.bat
 # Clone or set your sqlmap path
 git clone https://github.com/sqlmapproject/sqlmap.git
 
-# Install dependencies
-pip install flask werkzeug
+# Install dependencies (using lockfile for security)
+pip install -r requirements-lock.txt
+
+# Or install from requirements.txt
+pip install -r requirements.txt
 
 # Start the GUI
 cd "sqlmap project\sqlmap_gui"

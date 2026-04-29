@@ -40,3 +40,10 @@ uploads/*
 *.key
 *.pem
 *.secret
+
+# Aikido Security Scanning
+aikido-results.sarif
+aikido-*.json
+aikido-*.html
+.aikido/
+.aikido-cache/

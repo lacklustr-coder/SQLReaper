@@ -1,0 +1,160 @@
+# Aikido Security Configuration for SQLReaper
+# https://www.aikido.dev/
+
+# Project Information
+project:
+  name: SQLReaper
+  description: Advanced SQL Injection Penetration Testing Framework
+  language: python
+  framework: flask
+
+# Scanning Configuration
+scan:
+  # Enable dependency scanning
+  dependencies: true
+
+  # Enable SAST (Static Application Security Testing)
+  sast: true
+
+  # Enable secrets detection
+  secrets: true
+
+  # Enable container scanning if using Docker
+  containers: false
+
+  # Enable IaC (Infrastructure as Code) scanning
+  iac: false
+
+# Python-specific settings
+python:
+  # Requirements file to scan
+  requirements_file: requirements-lock.txt
+
+  # Python version
+  version: "3.8+"
+
+  # Package manager
+  package_manager: pip
+
+# Paths to scan
+paths:
+  include:
+    - "sqlmap_gui/**/*.py"
+    - "*.py"
+    - "requirements*.txt"
+
+  exclude:
+    - "__pycache__/**"
+    - "*.pyc"
+    - "venv/**"
+    - "env/**"
+    - ".venv/**"
+    - "results/**"
+    - "uploads/**"
+    - "profiles/**"
+
+# Vulnerability Settings
+vulnerabilities:
+  # Severity levels to report (critical, high, medium, low, info)
+  min_severity: medium
+
+  # Auto-fix when possible
+  auto_fix: false
+
+  # Fail build on vulnerabilities
+  fail_on_vulnerability: false
+
+  # Ignore specific CVEs (add as needed)
+  ignore:
+    # Example: - CVE-2024-12345
+    []
+
+# Secrets Detection
+secrets:
+  # Patterns to detect
+  patterns:
+    - api_keys
+    - passwords
+    - tokens
+    - private_keys
+    - credentials
+
+  # Files to exclude from secrets scanning
+  exclude:
+    - "*.md"
+    - "LICENSE"
+    - ".gitignore"
+
+# Code Quality Rules
+rules:
+  # Enable security-focused rules
+  security: true
+
+  # Custom rules for penetration testing tools
+  custom:
+    # Allow subprocess usage (required for sqlmap integration)
+    - allow_subprocess: true
+      reason: "Required for sqlmap execution"
+
+    # Allow eval/exec with warnings (used in some scan scenarios)
+    - warn_dynamic_execution: true
+      reason: "Penetration testing tool - used carefully"
+
+# Notifications
+notifications:
+  # Notify on new vulnerabilities
+  on_new_vulnerability: true
+
+  # Notify on fixed vulnerabilities
+  on_vulnerability_fixed: true
+
+  # Channels (configure in Aikido dashboard)
+  channels:
+    - email
+    # - slack
+    # - discord
+
+# CI/CD Integration
+ci:
+  # Block PRs with critical vulnerabilities
+  block_on_critical: true
+
+  # Block PRs with high vulnerabilities
+  block_on_high: false
+
+  # Comment on PRs with findings
+  pr_comments: true
+
+# Compliance & Reporting
+compliance:
+  # Generate compliance reports
+  enabled: true
+
+  # Compliance standards to check against
+  standards:
+    - owasp-top-10
+    - cwe-top-25
+    # - pci-dss
+    # - hipaa
+
+# Performance
+performance:
+  # Scan timeout in seconds
+  timeout: 600
+
+  # Parallel scanning
+  parallel: true
+
+  # Max file size to scan (MB)
+  max_file_size: 10
+
+# Advanced Options
+advanced:
+  # Enable verbose logging
+  verbose: false
+
+  # Cache scan results
+  cache: true
+
+  # Update vulnerability database before scan
+  update_db: true
