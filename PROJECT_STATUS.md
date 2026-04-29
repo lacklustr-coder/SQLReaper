@@ -175,7 +175,7 @@ curl http://localhost:5000/api/health/features
 | **PROJECT_STATUS.md** | This file - project overview |
 | **demo_api.py** | Interactive API demonstration |
 | **SECURITY.md** | Security policies |
-| **AIKIDO_SETUP.md** | Security scanning setup |
+| **QUICK_START.md** | Quick start guide |
 
 ---
 

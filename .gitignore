@@ -8,6 +8,17 @@ __pycache__/
 dist/
 build/
 *.whl
+*.pyc
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log
 
 # Virtual environments
 venv/
@@ -27,23 +38,27 @@ Thumbs.db
 desktop.ini
 
 # SQLReaper - Generated files
-results/*.txt
-results/*.json
-results/autosave.json
-results/*.md
-results/*.html
+results/
 profiles/*.json
 uploads/*
 !uploads/.gitkeep
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Weird pip artifacts (from bad installs)
+=*.*.*
+[0-9]
 
 # Secrets
 *.key
 *.pem
 *.secret
+*.env
 
-# Aikido Security Scanning
-aikido-results.sarif
-aikido-*.json
-aikido-*.html
-.aikido/
-.aikido-cache/
+# Keep important empty directories
+!results/.gitkeep
+!profiles/.gitkeep
+!uploads/.gitkeep

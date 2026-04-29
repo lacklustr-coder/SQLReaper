@@ -585,9 +585,9 @@ for chain in response.json()['chains']:
 
 ## 📚 Additional Resources
 
-- [AIKIDO_SETUP.md](AIKIDO_SETUP.md) - Security scanning setup
 - [SECURITY.md](SECURITY.md) - Security policies
 - [README.md](README.md) - General documentation
+- [QUICK_START.md](QUICK_START.md) - Quick start guide
 
 ---
 

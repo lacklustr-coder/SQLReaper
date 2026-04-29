@@ -355,4 +355,4 @@ All existing features continue to work as before. New features are additive.
 
 **For security best practices, see [SECURITY.md](SECURITY.md)**
 
-**For Aikido setup, see [AIKIDO_SETUP.md](AIKIDO_SETUP.md)**
+**For quick start guide, see [QUICK_START.md](QUICK_START.md)**

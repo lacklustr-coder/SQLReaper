@@ -212,7 +212,6 @@ python sqlmap_gui/app.py
 | **CHANGELOG.md** | What's new in this version |
 | **PROJECT_STATUS.md** | Testing checklist and status |
 | **SECURITY.md** | Security policies |
-| **AIKIDO_SETUP.md** | Security scanning setup |
 
 ---
 

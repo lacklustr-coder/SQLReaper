@@ -6,7 +6,7 @@
 
 **Enterprise-Grade SQL Injection Penetration Testing Framework**
 
-_[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org) [![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/) [![License](https://img.shields.io/badge/License-GPLv3-lightgrey.svg)](LICENSE) [![AI Powered](https://img.shields.io/badge/AI-Powered-purple.svg)](FEATURES.md)_
+_[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org) [![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/) [![License](https://img.shields.io/badge/License-GPLv3-lightgrey.svg)](LICENSE)_
 
 A powerful, enterprise-grade penetration testing framework featuring **AI-powered vulnerability analysis**, **advanced WAF bypass techniques**, **real-time WebSocket monitoring**, and **JWT authentication**. Includes 300+ pre-built Google dorks, automated exploitation chain discovery, and comprehensive reporting.
 
@@ -65,10 +65,10 @@ A powerful, enterprise-grade penetration testing framework featuring **AI-powere
 - Authentication headers
 
 ### &#128274; Security
-- Integrated [Aikido](https://www.aikido.dev/) security scanning
-- Automated vulnerability detection
-- Dependency tracking with lockfile
-- OWASP Top 10 compliance monitoring
+- JWT-based authentication with RBAC
+- Secure token-based sessions
+- Password hashing and encryption
+- Input validation and sanitization
 
 ## Screenshot
 
@@ -84,7 +84,7 @@ A powerful, enterprise-grade penetration testing framework featuring **AI-powere
 - Windows, Linux, or macOS
 
 ### Security Note
-SQLReaper includes [Aikido](https://www.aikido.dev/) security scanning for dependency vulnerability monitoring. See [AIKIDO_SETUP.md](AIKIDO_SETUP.md) for setup instructions.
+SQLReaper implements industry-standard security practices including JWT authentication, password hashing, and input validation. Always use in authorized testing environments only.
 
 ### Quick Start (Windows)
 
