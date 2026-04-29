@@ -19,5 +19,14 @@ itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
 
+# WebSocket support
+flask-socketio==5.3.6
+python-socketio==5.11.1
+bidict==0.23.1
+python-engineio==4.9.0
+simple-websocket==1.0.0
+wsproto==1.2.0
+h11==0.14.0
+
 # Additional indirect dependencies
 click-plugins==1.1.1.2

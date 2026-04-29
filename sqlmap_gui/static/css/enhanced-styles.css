@@ -1,0 +1,438 @@
+/* Enhanced Features Styles */
+
+/* Templates */
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.template-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 14px;
+    transition: all 0.3s;
+}
+
+.template-card:hover {
+    border-color: var(--border-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,255,68,0.15);
+}
+
+.template-card.default {
+    border-color: var(--success);
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.template-header h4 {
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.template-description {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.template-footer {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Vulnerabilities */
+.vulnerabilities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vuln-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 14px;
+    border-left-width: 4px;
+}
+
+.vuln-card.severity-critical {
+    border-left-color: #ff0000;
+}
+
+.vuln-card.severity-high {
+    border-left-color: var(--error);
+}
+
+.vuln-card.severity-medium {
+    border-left-color: var(--warning);
+}
+
+.vuln-card.severity-low {
+    border-left-color: var(--info);
+}
+
+.vuln-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.vuln-header h4 {
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.severity-badge {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.severity-badge.critical {
+    background: rgba(255,0,0,0.2);
+    color: #ff0000;
+}
+
+.severity-badge.high {
+    background: rgba(255,51,51,0.2);
+    color: var(--error);
+}
+
+.severity-badge.medium {
+    background: rgba(255,170,0,0.2);
+    color: var(--warning);
+}
+
+.severity-badge.low {
+    background: rgba(0,170,255,0.2);
+    color: var(--info);
+}
+
+.vuln-details {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.vuln-details p {
+    margin: 4px 0;
+}
+
+.vuln-details code {
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.vuln-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.vuln-actions select {
+    flex: 1;
+    padding: 6px;
+    font-size: 0.8em;
+}
+
+/* Fuzzer */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8em;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: normal;
+}
+
+.fuzz-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.fuzz-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.fuzz-result-item {
+    display: grid;
+    grid-template-columns: 40px 120px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.fuzz-index {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.fuzz-category {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.fuzz-url {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 3px;
+    word-break: break-all;
+    font-size: 0.85em;
+}
+
+/* Queue */
+.queue-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.queue-stat {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 14px;
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: var(--success);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.queue-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.queue-item.status-pending {
+    border-left: 3px solid var(--warning);
+}
+
+.queue-item.status-running {
+    border-left: 3px solid var(--success);
+}
+
+.queue-item.status-completed {
+    border-left: 3px solid var(--info);
+}
+
+.queue-info {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: 600;
+}
+
+.badge-pending {
+    background: rgba(255,170,0,0.2);
+    color: var(--warning);
+}
+
+.badge-running {
+    background: rgba(0,255,68,0.2);
+    color: var(--success);
+}
+
+.badge-completed {
+    background: rgba(0,170,255,0.2);
+    color: var(--info);
+}
+
+/* Statistics */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+}
+
+.stat-card .stat-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: var(--success);
+}
+
+.stat-card.severity-critical .stat-value {
+    color: #ff0000;
+}
+
+.stat-card.severity-high .stat-value {
+    color: var(--error);
+}
+
+.stat-card.severity-medium .stat-value {
+    color: var(--warning);
+}
+
+.stat-card.severity-low .stat-value {
+    color: var(--info);
+}
+
+.chart-section {
+    margin-bottom: 24px;
+}
+
+.chart-section h4 {
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    font-size: 0.9em;
+}
+
+.chart-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chart-bar {
+    display: grid;
+    grid-template-columns: 150px 1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.chart-label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.chart-bar-fill {
+    height: 24px;
+    background: var(--gradient-primary);
+    border-radius: 4px;
+    transition: width 0.5s;
+}
+
+.chart-value {
+    font-size: 0.8em;
+    color: var(--text-primary);
+    font-weight: 600;
+    min-width: 30px;
+    text-align: right;
+}
+
+/* Vulnerability Notification */
+.vuln-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 14px 18px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 9998;
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+}
+
+.vuln-notification.severity-critical {
+    border-color: #ff0000;
+}
+
+.vuln-notification.severity-high {
+    border-color: var(--error);
+}
+
+.vuln-notification.severity-medium {
+    border-color: var(--warning);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.badge-primary {
+    background: rgba(0,255,68,0.2);
+    color: var(--success);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: 600;
+}

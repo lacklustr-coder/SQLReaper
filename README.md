@@ -2,13 +2,23 @@
 
 <div align="center">
 
-## &#9760; SQLReaper v2.1
+## &#9760; SQLReaper v2.1 Advanced
 
-**Advanced SQL Injection Penetration Testing Framework - GUI**
+**Enterprise-Grade SQL Injection Penetration Testing Framework**
 
-_[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org) [![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/) [![License](https://img.shields.io/badge/License-GPLv3-lightgrey.svg)](LICENSE)_
+_[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org) [![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/) [![License](https://img.shields.io/badge/License-GPLv3-lightgrey.svg)](LICENSE) [![AI Powered](https://img.shields.io/badge/AI-Powered-purple.svg)](FEATURES.md)_
 
-A powerful, modern GUI wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap) with 300+ pre-built Google dorks, batch scanning, profiles, and more.
+A powerful, enterprise-grade penetration testing framework featuring **AI-powered vulnerability analysis**, **advanced WAF bypass techniques**, **real-time WebSocket monitoring**, and **JWT authentication**. Includes 300+ pre-built Google dorks, automated exploitation chain discovery, and comprehensive reporting.
+
+### 🔥 **NEW in v2.1 Advanced:**
+- 🧠 **AI-Powered Analysis** - Automatic vulnerability classification and remediation suggestions
+- 🛡️ **WAF Bypass Engine** - ML-based payload mutation with 9+ evasion techniques  
+- 🔐 **Multi-User Auth** - JWT-based authentication with RBAC
+- 📡 **Real-Time Monitoring** - WebSocket-based live scan streaming
+- ⚡ **Exploitation Chains** - Automated vulnerability chaining analysis
+- 🎯 **Advanced Fuzzing** - 8+ injection type support with custom payloads
+
+**[📖 View Full Feature List](FEATURES.md)**
 
 </div>
 
@@ -70,42 +80,82 @@ A powerful, modern GUI wrapper for [sqlmap](https://github.com/sqlmapproject/sql
 
 ### Prerequisites
 - Python 3.8 or higher
-- [sqlmap](https://github.com/sqlmapproject/sqlmap) installed
+- [sqlmap](https://github.com/sqlmapproject/sqlmap) installed (optional, can configure later)
 - Windows, Linux, or macOS
 
 ### Security Note
 SQLReaper includes [Aikido](https://www.aikido.dev/) security scanning for dependency vulnerability monitoring. See [AIKIDO_SETUP.md](AIKIDO_SETUP.md) for setup instructions.
 
-### Quick Start
+### Quick Start (Windows)
 
-**Windows:**
+**First Time Setup:**
 ```batch
-double-click start.bat
+# Run the setup wizard (installs dependencies, creates directories)
+setup.bat
 ```
 
-**Manual:**
+**Start SQLReaper:**
+```batch
+# Launch the application
+start.bat
+```
+
+**Try the Demo:**
+```batch
+# Run interactive API demo (in a separate window)
+demo.bat
+```
+
+### Manual Installation (All Platforms)
+
 ```bash
-# Clone or set your sqlmap path
-git clone https://github.com/sqlmapproject/sqlmap.git
+# 1. Clone or download SQLReaper
+git clone <your-repo-url>
+cd SQLReaper
 
-# Install dependencies (using lockfile for security)
-pip install -r requirements-lock.txt
-
-# Or install from requirements.txt
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Start the GUI
-cd "sqlmap project\sqlmap_gui"
-python app.py
+# 3. (Optional) Install sqlmap
+git clone https://github.com/sqlmapproject/sqlmap.git
+
+# 4. Start the application
+python sqlmap_gui/app.py
+
+# 5. Open your browser
+# Visit: http://localhost:5000
 ```
+
+### Default Login
+
+```
+Username: admin
+Password: admin123
+```
+
+⚠️ **IMPORTANT:** Change the default password immediately in production!
 
 ### Configuration
 
-1. Open http://localhost:5000 in your browser
-2. Click Settings (&#9881;) to configure:
+1. **Web Interface**: Open http://localhost:5000
+2. **Login**: Use default credentials (admin/admin123)
+3. **Settings**: Click Settings (&#9881;) to configure:
    - **SQLMap Path** - Full path to sqlmap.py
-   - **Proxy** - HTTP proxy settings
+   - **Proxy** - HTTP proxy settings  
    - **Auth Header** - Authentication headers
+4. **API Access**: Get JWT token from `/api/auth/login`
+
+### Environment Variables (Optional)
+
+```batch
+# Windows
+set SQLMAP_PATH=C:\path\to\sqlmap.py
+set JWT_SECRET=your-secret-key-here
+
+# Linux/Mac
+export SQLMAP_PATH=/path/to/sqlmap.py
+export JWT_SECRET=your-secret-key-here
+```
 
 ## Project Structure
 

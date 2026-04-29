@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQLReaper v2.1</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/enhanced-styles.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -34,11 +33,6 @@
             <button class="tab-btn" data-tab="google-dork">&#128269; Google Dorking</button>
             <button class="tab-btn" data-tab="multi-dork">&#128203; Multi-Dork</button>
             <button class="tab-btn" data-tab="dork-library">&#128218; Dork Library</button>
-            <button class="tab-btn" data-tab="templates">&#128196; Templates</button>
-            <button class="tab-btn" data-tab="vulnerabilities">&#128274; Vulnerabilities</button>
-            <button class="tab-btn" data-tab="fuzzer">&#128165; Fuzzer</button>
-            <button class="tab-btn" data-tab="queue">&#128260; Queue</button>
-            <button class="tab-btn" data-tab="statistics">&#128200; Statistics</button>
             <button class="tab-btn" data-tab="profiles">&#128190; Profiles</button>
         </div>
         <div class="main-content">
@@ -534,110 +528,6 @@
                         </div>
                     </div></div>
                 </div>
-
-                <!-- Templates -->
-                <div class="tab-content" id="templates">
-                    <div class="panel">
-                        <div class="panel-header"><span>&#128196; Scan Templates</span></div>
-                        <div class="panel-content">
-                            <p>Pre-configured scan templates for common scenarios.</p>
-                            <div id="templates-list" class="templates-grid"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Vulnerabilities -->
-                <div class="tab-content" id="vulnerabilities">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <span>&#128274; Vulnerability Management</span>
-                            <div class="panel-actions">
-                                <select id="vuln-severity-filter">
-                                    <option value="">All Severities</option>
-                                    <option value="critical">Critical</option>
-                                    <option value="high">High</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="low">Low</option>
-                                </select>
-                                <select id="vuln-status-filter">
-                                    <option value="">All Status</option>
-                                    <option value="new">New</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="fixed">Fixed</option>
-                                    <option value="ignored">Ignored</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="panel-content">
-                            <div id="vulnerabilities-list" class="vulnerabilities-list"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Parameter Fuzzer -->
-                <div class="tab-content" id="fuzzer">
-                    <div class="panel">
-                        <div class="panel-header"><span>&#128165; Parameter Fuzzer</span></div>
-                        <div class="panel-content">
-                            <form id="fuzzer-form">
-                                <div class="form-group">
-                                    <label for="fuzz-url">Base URL *</label>
-                                    <input type="text" id="fuzz-url" placeholder="https://example.com/page.php?id=1" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="fuzz-parameter">Parameter to Fuzz *</label>
-                                    <input type="text" id="fuzz-parameter" placeholder="id" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Fuzzing Types</label>
-                                    <div class="checkbox-group">
-                                        <label><input type="checkbox" value="sql" checked> SQL Injection</label>
-                                        <label><input type="checkbox" value="xss"> XSS</label>
-                                        <label><input type="checkbox" value="command"> Command Injection</label>
-                                        <label><input type="checkbox" value="nosql"> NoSQL Injection</label>
-                                        <label><input type="checkbox" value="ldap"> LDAP Injection</label>
-                                        <label><input type="checkbox" value="xxe"> XXE</label>
-                                        <label><input type="checkbox" value="ssrf"> SSRF</label>
-                                        <label><input type="checkbox" value="path_traversal"> Path Traversal</label>
-                                    </div>
-                                </div>
-                                <div class="button-group">
-                                    <button type="submit" class="btn-primary">&#128165; Generate Payloads</button>
-                                    <button type="button" class="btn-secondary" id="fuzz-clear-btn">Clear</button>
-                                </div>
-                            </form>
-                            <div id="fuzz-results" style="margin-top: 20px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Scan Queue -->
-                <div class="tab-content" id="queue">
-                    <div class="panel">
-                        <div class="panel-header">
-                            <span>&#128260; Scan Queue</span>
-                            <div class="panel-actions">
-                                <button class="btn-small" id="refresh-queue-btn">&#128260; Refresh</button>
-                            </div>
-                        </div>
-                        <div class="panel-content">
-                            <div class="queue-stats" id="queue-stats"></div>
-                            <div id="queue-list" class="queue-list"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Statistics Dashboard -->
-                <div class="tab-content" id="statistics">
-                    <div class="panel">
-                        <div class="panel-header"><span>&#128200; Statistics Dashboard</span></div>
-                        <div class="panel-content">
-                            <div class="stats-grid" id="stats-grid"></div>
-                            <div class="stats-charts" id="stats-charts"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Profiles -->
                 <div class="tab-content" id="profiles">
                     <div class="panel"><div class="panel-header"><span>&#128190; Scan Profiles</span></div><div class="panel-content">
@@ -675,8 +565,6 @@
     <div class="modal" id="settings-modal"><div class="modal-content"><div class="modal-header"><h3>&#9881; Settings</h3><button class="modal-close" id="settings-close">&times;</button></div><div class="modal-body"><div id="settings-content">Loading...</div></div></div></div>
     <div class="modal" id="export-modal"><div class="modal-content"><div class="modal-header"><h3>&#128196; Export Results</h3><button class="modal-close" id="export-close">&times;</button></div><div class="modal-body"><div class="export-options"><button class="export-btn" data-format="txt">&#128196; Text (.txt)</button><button class="export-btn" data-format="md">&#128220; Markdown (.md)</button><button class="export-btn" data-format="html">&#127760; HTML (.html)</button><button class="export-btn" data-format="json">&#128202; JSON (.json)</button></div></div></div></div>
     <div class="modal" id="save-profile-modal"><div class="modal-content"><div class="modal-header"><h3>&#128190; Save Profile</h3><button class="modal-close" id="save-profile-close">&times;</button></div><div class="modal-body"><div class="form-group"><label>Name</label><input type="text" id="modal-profile-name" placeholder="Profile name"></div><div class="button-group"><button class="btn-primary" id="modal-save-profile">Save</button></div></div></div></div>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="/static/js/main.js"></script>
-    <script src="/static/js/enhanced.js"></script>
 </body>
 </html>
