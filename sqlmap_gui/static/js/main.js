@@ -747,13 +747,41 @@
       });
     }
     $$(".dork-item").forEach(function (d) {
-      d.addEventListener("click", function () {
-        navigator.clipboard
-          .writeText(d.getAttribute("data-dork"))
-          .then(function () {
-            toast("Copied", "success");
-          });
+      // Click on dork item (not the clipboard button) - populate field and switch tab
+      d.addEventListener("click", function (e) {
+        // Don't trigger if clicking the clipboard button
+        if (e.target.classList.contains("dork-clipboard-btn")) {
+          return;
+        }
+        var dorkValue = d.getAttribute("data-dork");
+        var dorkQueryField = $("#dork-query");
+        if (dorkQueryField) {
+          dorkQueryField.value = dorkValue;
+          // Switch to Google Dorking tab
+          var dorkTab = $('[data-tab="google-dork"]');
+          if (dorkTab) {
+            dorkTab.click();
+          }
+          toast("Dork applied to Google Dorking tab", "success");
+        }
       });
+
+      // Click on clipboard button - copy only
+      var clipboardBtn = d.querySelector(".dork-clipboard-btn");
+      if (clipboardBtn) {
+        clipboardBtn.addEventListener("click", function (e) {
+          e.stopPropagation(); // Prevent triggering parent click
+          var dorkValue = d.getAttribute("data-dork");
+          navigator.clipboard
+            .writeText(dorkValue)
+            .then(function () {
+              toast("Copied to clipboard", "success");
+            })
+            .catch(function () {
+              toast("Failed to copy", "error");
+            });
+        });
+      }
     });
 
     // ---- Profiles ----
