@@ -11,45 +11,116 @@
 .template-card {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-subtle);
-    border-radius: 6px;
-    padding: 14px;
-    transition: all 0.3s;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    cursor: pointer;
+}
+
+.template-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        var(--accent-blue),
+        var(--accent-orange)
+    );
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: 8px 8px 0 0;
 }
 
 .template-card:hover {
     border-color: var(--accent-blue);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(89, 194, 255, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(89, 194, 255, 0.25);
+}
+
+.template-card:hover::before {
+    opacity: 1;
 }
 
 .template-card.default {
-    border-color: var(--accent-orange);
-    background: rgba(255, 180, 84, 0.05);
+    border-color: var(--accent-blue);
+    background: linear-gradient(
+        135deg,
+        rgba(89, 194, 255, 0.03),
+        rgba(255, 180, 84, 0.03)
+    );
 }
 
 .template-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
 }
 
 .template-header h4 {
     color: var(--text-primary);
-    font-size: 0.9em;
+    font-size: 1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.template-icon {
+    font-size: 1.2em;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.template-badge {
+    background: rgba(89, 194, 255, 0.15);
+    color: var(--accent-blue);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 .template-description {
-    font-size: 0.8em;
+    font-size: 0.85em;
     color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.4;
+    margin-bottom: 14px;
+    line-height: 1.5;
+    min-height: 40px;
 }
 
 .template-footer {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.template-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 0.75em;
+    color: var(--text-muted);
+    flex: 1;
+}
+
+.template-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.template-stat-icon {
+    color: var(--accent-blue);
 }
 
 /* Vulnerabilities */
