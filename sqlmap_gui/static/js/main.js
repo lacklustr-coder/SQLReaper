@@ -599,13 +599,18 @@
           toast("Enter a dork", "warning");
           return;
         }
+
         var btn = $("#dork-scan-btn");
         if (btn) btn.disabled = true;
         var di = $("#dork-status-indicator");
         if (di) di.className = "status-indicator status-running";
         clearOutput();
-        appendMsg("[+] Dorking: " + dork, "term-info");
-        api("/api/google-dork", {
+        appendMsg("[+] Starting dork scan: " + dork, "term-info");
+        appendMsg("[*] Waiting for sqlmap output...", "term-info");
+
+        // Use the async stream endpoint so the scan runs in the background
+        // and we can show live output without blocking the browser.
+        api("/api/google-dork/stream", {
           method: "POST",
           body: JSON.stringify({
             dork: dork,
@@ -614,19 +619,101 @@
               : "Google",
           }),
         })
-          .then(function (d) {
-            appendMsg(d.output || "No results", "term-success");
-            if (di) di.className = "status-indicator status-success";
-            toast("Dork done", "success");
-            loadHistory();
-            stats();
+          .then(function (startData) {
+            var scanId = startData.scan_id;
+            appendMsg("[+] Scan queued (id: " + scanId + ")", "term-info");
+
+            // Track how many lines we have already rendered to avoid duplicates
+            var lastLineCount = 0;
+
+            var pollTimer = setInterval(function () {
+              fetch(API + "/api/google-dork/poll/" + scanId)
+                .then(function (r) {
+                  // 404 means the scan already finished and was cleaned up;
+                  // treat it the same as a completed response.
+                  if (r.status === 404) {
+                    clearInterval(pollTimer);
+                    loadHistory();
+                    stats();
+                    var btn2 = $("#dork-scan-btn");
+                    if (btn2) btn2.disabled = false;
+                    return null;
+                  }
+                  return r.json();
+                })
+                .then(function (p) {
+                  if (!p) return;
+
+                  // Append only new lines since the last poll
+                  var currentCount = p.line_count || 0;
+                  if (currentCount > lastLineCount) {
+                    var allLines = (p.output || "").split("\n");
+                    var newLines = allLines.slice(lastLineCount);
+                    newLines.forEach(function (line) {
+                      if (line.trim()) {
+                        var cls =
+                          line.indexOf("[ERROR]") !== -1 ||
+                          line.indexOf("error") !== -1 ||
+                          line.indexOf("STDERR") !== -1
+                            ? "term-error"
+                            : "term-success";
+                        appendMsg(line, cls);
+                      }
+                    });
+                    lastLineCount = currentCount;
+                  }
+
+                  if (p.complete) {
+                    clearInterval(pollTimer);
+
+                    var failed =
+                      p.return_code !== 0 ||
+                      p.return_code === -1 ||
+                      p.status === "error";
+
+                    if (failed) {
+                      if (!lastLineCount) {
+                        appendMsg(
+                          "[!] Scan failed with no output. Check your sqlmap path in Settings.",
+                          "term-error",
+                        );
+                      }
+                      if (di) di.className = "status-indicator status-error";
+                      toast(
+                        "Dork scan failed (exit " + p.return_code + ")",
+                        "error",
+                      );
+                    } else {
+                      if (!lastLineCount) {
+                        appendMsg(
+                          "[*] Scan finished with no output — no targets found.",
+                          "term-warning",
+                        );
+                      }
+                      if (di) di.className = "status-indicator status-success";
+                      toast("Dork scan complete", "success");
+                    }
+
+                    loadHistory();
+                    stats();
+                    var btn2 = $("#dork-scan-btn");
+                    if (btn2) btn2.disabled = false;
+                  }
+                })
+                .catch(function (pollErr) {
+                  clearInterval(pollTimer);
+                  appendMsg("[!] Poll error: " + pollErr.message, "term-error");
+                  if (di) di.className = "status-indicator status-error";
+                  var btn2 = $("#dork-scan-btn");
+                  if (btn2) btn2.disabled = false;
+                });
+            }, 1500); // poll every 1.5 s
           })
           .catch(function (err) {
-            appendMsg("Error: " + err.message, "term-error");
+            // Failed to even start the scan
+            appendMsg("[!] Error: " + err.message, "term-error");
             if (di) di.className = "status-indicator status-error";
             toast(err.message, "error");
-          })
-          .finally(function () {
             var btn2 = $("#dork-scan-btn");
             if (btn2) btn2.disabled = false;
           });

@@ -53,6 +53,10 @@ logger = logging.getLogger("sqlmap_gui")
 active_scans = {}
 scan_lock = threading.Lock()
 
+# Active dork scans (for async streaming)
+_dork_scans: Dict[str, Any] = {}
+_dork_lock = threading.Lock()
+
 # History
 HISTORY_FILE = os.path.join(app.config["RESULTS_FOLDER"], "scan_history.json")
 
@@ -140,6 +144,23 @@ def options_to_argv(options: Any) -> List[str]:
         return shlex.split(s, posix=True)
     except ValueError:
         return s.split()
+
+
+def resolve_sqlmap_cmd(path: str) -> str:
+    """Resolve a valid path to sqlmap.py.
+
+    Handles the case where the user stores a directory path in settings instead
+    of the full path to sqlmap.py (e.g. 'C:/sqlmap' vs 'C:/sqlmap/sqlmap.py').
+    All other routes call ['python', sqlmap, ...] directly, so this helper
+    ensures the dork routes are consistent with that expectation.
+    """
+    if not path:
+        return path
+    if os.path.isdir(path):
+        candidate = os.path.join(path, "sqlmap.py")
+        if os.path.exists(candidate):
+            return candidate
+    return path
 
 
 def save_profile(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -585,48 +606,146 @@ def batch_scan():
     return jsonify({"batch_id": bid, "results": results, "total": len(results)})
 
 
+# ---------------------------------------------------------------------------
+# Dork scan background worker
+# ---------------------------------------------------------------------------
+
+
+def _run_dork_scan(scan_id: str, cmd: List[str], dork: str) -> None:
+    """Execute a Google dork scan in a background thread.
+
+    Streams stdout (stderr merged in) line-by-line into _dork_scans so the
+    polling endpoint can return live output to the browser without blocking.
+    """
+    try:
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # merge stderr -> stdout for unified output
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        )
+        collected: List[str] = []
+        for raw_line in p.stdout:
+            line = raw_line.rstrip()
+            collected.append(line)
+            with _dork_lock:
+                if scan_id in _dork_scans:
+                    _dork_scans[scan_id]["lines"].append(line)
+        p.wait()
+
+        full_output = "\n".join(collected)
+        status = "success" if p.returncode == 0 else "error"
+
+        result_file = os.path.join(app.config["RESULTS_FOLDER"], f"{scan_id}.txt")
+        with open(result_file, "w") as f:
+            f.write(full_output)
+
+        autosave.save(scan_id, f"Dork: {dork}", full_output, status, p.returncode)
+
+        # Update history entry that was created as "running" when the scan started
+        history = load_history()
+        for item in history:
+            if item.get("id") == scan_id:
+                item["status"] = status
+                item["return_code"] = p.returncode
+                item["result_file"] = result_file
+                break
+        save_history(history)
+
+        with _dork_lock:
+            if scan_id in _dork_scans:
+                _dork_scans[scan_id].update(
+                    {
+                        "status": status,
+                        "return_code": p.returncode,
+                        "complete": True,
+                        "result_file": result_file,
+                    }
+                )
+        tray.set_status(status.title())
+
+    except FileNotFoundError:
+        err = "sqlmap not found. Check your sqlmap path in Settings."
+        logger.error(f"Dork scan [{scan_id}]: {err}")
+        with _dork_lock:
+            if scan_id in _dork_scans:
+                _dork_scans[scan_id]["lines"].append(f"[ERROR] {err}")
+                _dork_scans[scan_id].update(
+                    {"status": "error", "return_code": -1, "complete": True}
+                )
+        tray.set_status("Error")
+
+    except Exception as exc:
+        err = str(exc)
+        logger.error(f"Dork scan [{scan_id}] exception: {err}")
+        with _dork_lock:
+            if scan_id in _dork_scans:
+                _dork_scans[scan_id]["lines"].append(f"[ERROR] {err}")
+                _dork_scans[scan_id].update(
+                    {"status": "error", "return_code": -1, "complete": True}
+                )
+        tray.set_status("Error")
+
+
+# ---------------------------------------------------------------------------
+# Dork routes
+# ---------------------------------------------------------------------------
+
+
+def _build_dork_cmd(sqlmap: str, dork: str, data: Dict[str, Any]) -> List[str]:
+    """Build the sqlmap command for a Google dork scan."""
+    cmd = ["python", sqlmap, "-g", dork, "--batch", "--flush-session"]
+    rl = str(data.get("results_limit", "")).strip()
+    if rl and rl != "10":
+        cmd += ["--google-results", rl]
+    sp = str(data.get("start_page", "")).strip()
+    if sp and sp != "1":
+        cmd += ["--start-page", sp]
+    aopt = data.get("additional_options", "")
+    cmd.extend(options_to_argv(aopt))
+    return cmd
+
+
 @app.route("/api/google-dork", methods=["POST"])
 def google_dork_scan():
+    """Synchronous dork scan kept for backward compatibility.
+
+    Bugs fixed vs the original implementation:
+    - Removed the broken/inconsistent sqlmap path-detection logic; now uses
+      resolve_sqlmap_cmd() like every other route.
+    - stderr is merged into the output so errors are always visible to the
+      caller instead of being silently discarded.
+    - Returns HTTP 500 when sqlmap exits with a non-zero code so the
+      frontend's api() helper will correctly raise an error instead of
+      treating every response as a success.
+    """
     d = request.json or {}
     dork = d.get("dork", "")
     if not dork:
         return jsonify({"error": "Dork required"}), 400
+
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+
     se = d.get("search_engine", "Google")
     if se != "Google":
         return jsonify(
-            {
-                "error": f'Sqlmap -g flag only works with Google search engine. "{se}" search is not supported for dorking.'
-            }
+            {"error": f'Only Google is supported for dorking ("{se}" is not).'},
         ), 400
-    cmd = ["python", sqlmap, "-g", dork]
-    if os.path.basename(os.path.dirname(sqlmap)) == "sqlmap" and os.path.exists(
-        os.path.join(sqlmap, "sqlmap.py")
-    ):
-        cmd = ["python", os.path.join(sqlmap, "sqlmap.py"), "-g", dork]
-    elif not os.path.exists(sqlmap) and os.path.exists(
-        os.path.join(os.path.dirname(sqlmap), "sqlmap", "sqlmap.py")
-    ):
-        cmd = [
-            "python",
-            os.path.join(os.path.dirname(sqlmap), "sqlmap", "sqlmap.py"),
-            "-g",
-            dork,
-        ]
-    if d.get("results_limit", "10") != "10":
-        cmd.append(f"--results={d['results_limit']}")
-    if d.get("start_page", "1") != "1":
-        cmd.append(f"--start={d['start_page']}")
-    aopt = d.get("additional_options", "")
-    cmd.extend(options_to_argv(aopt))
-    if d.get("batch", True):
-        cmd.append("--batch")
-    cmd.append("--flush-session")
+
+    cmd = _build_dork_cmd(sqlmap, dork, d)
     tray.set_status("Running")
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-        output = result.stdout or ""
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        # Always surface stderr so errors are never silently hidden
+        output = stdout
+        if stderr:
+            output = (output + "\n[STDERR]\n" + stderr).strip() if output else stderr
+
         status = "success" if result.returncode == 0 else "error"
         scan_id = str(uuid.uuid4())
         result_file = os.path.join(app.config["RESULTS_FOLDER"], f"{scan_id}.txt")
@@ -647,16 +766,19 @@ def google_dork_scan():
         )
         save_history(history)
         tray.set_status(status.title())
-        return jsonify(
-            {
-                "output": output,
-                "error": result.stderr or "",
-                "return_code": result.returncode,
-                "command": " ".join(cmd),
-                "scan_id": scan_id,
-                "status": status,
-            }
-        )
+        response_data = {
+            "output": output,
+            "error": stderr,
+            "return_code": result.returncode,
+            "command": " ".join(cmd),
+            "scan_id": scan_id,
+            "status": status,
+        }
+        # Return 500 on failure so the frontend api() wrapper throws an error
+        # rather than silently treating a failed scan as a success.
+        if result.returncode != 0:
+            return jsonify(response_data), 500
+        return jsonify(response_data)
     except subprocess.TimeoutExpired:
         tray.set_status("Timeout")
         return jsonify(
@@ -664,11 +786,99 @@ def google_dork_scan():
         ), 408
     except FileNotFoundError:
         return jsonify(
-            {"error": f"sqlmap not found at {sqlmap}. Set correct path in settings."}
+            {"error": f"sqlmap not found at {sqlmap}. Set correct path in Settings."}
         ), 500
     except Exception as e:
         tray.set_status("Error")
         return jsonify({"error": f"Error: {str(e)}"}), 500
+
+
+@app.route("/api/google-dork/stream", methods=["POST"])
+def google_dork_scan_stream():
+    """Async dork scan: starts immediately and returns a scan_id.
+
+    The client should poll /api/google-dork/poll/<scan_id> every 1-2 seconds
+    to retrieve live output and check for completion.
+    """
+    d = request.json or {}
+    dork = d.get("dork", "")
+    if not dork:
+        return jsonify({"error": "Dork required"}), 400
+
+    ss = load_settings()
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+
+    se = d.get("search_engine", "Google")
+    if se != "Google":
+        return jsonify(
+            {"error": f'Only Google is supported for dorking ("{se}" is not).'},
+        ), 400
+
+    cmd = _build_dork_cmd(sqlmap, dork, d)
+    scan_id = str(uuid.uuid4())
+
+    with _dork_lock:
+        _dork_scans[scan_id] = {
+            "dork": dork,
+            "cmd": " ".join(cmd),
+            "status": "running",
+            "lines": [],
+            "complete": False,
+            "return_code": None,
+            "start_time": datetime.now().isoformat(),
+        }
+
+    # Record in history immediately as "running" so it appears in the sidebar
+    history = load_history()
+    history.insert(
+        0,
+        {
+            "id": scan_id,
+            "target": f"Dork: {dork}",
+            "timestamp": datetime.now().isoformat(),
+            "status": "running",
+            "return_code": None,
+        },
+    )
+    save_history(history)
+
+    t = threading.Thread(target=_run_dork_scan, args=(scan_id, cmd, dork))
+    t.daemon = True
+    t.start()
+    tray.set_status("Running")
+
+    return jsonify(
+        {"scan_id": scan_id, "message": "Dork scan started", "command": " ".join(cmd)}
+    )
+
+
+@app.route("/api/google-dork/poll/<scan_id>", methods=["GET"])
+def google_dork_poll(scan_id):
+    """Return accumulated output and status for an async dork scan.
+
+    Call this every 1-2 seconds after starting a stream scan.  Once
+    ``complete`` is true in the response the scan is finished and the
+    entry is removed from memory (further calls return 404).
+    """
+    with _dork_lock:
+        scan = _dork_scans.get(scan_id)
+        if scan is None:
+            return jsonify({"error": "Scan not found or already completed"}), 404
+
+        snapshot = {
+            "scan_id": scan_id,
+            "status": scan["status"],
+            "complete": scan["complete"],
+            "output": "\n".join(scan["lines"]),
+            "line_count": len(scan["lines"]),
+            "return_code": scan.get("return_code"),
+        }
+
+        # Clean up from memory once the client has picked up the final result
+        if scan["complete"]:
+            del _dork_scans[scan_id]
+
+    return jsonify(snapshot)
 
 
 @app.route("/api/google-dork-multi", methods=["POST"])
