@@ -41,6 +41,28 @@ class AutoSave:
         self._save()
         logger.info(f"Auto-saved scan: {scan_id} ({status})")
 
+        # Sync to ScanDB and VulnerabilityDB for statistics dashboard
+        try:
+            from database import ScanDB, VulnerabilityDB
+            from scan_executor import VulnerabilityParser
+
+            if not ScanDB.get(scan_id):
+                ScanDB.create(scan_id, target, "gui_scan")
+
+            db_status = "completed" if status == "success" else ("failed" if status == "error" else status)
+            end_time = datetime.now().isoformat()
+            ScanDB.update_status(scan_id, db_status, code, output, end_time)
+
+            vulns = VulnerabilityParser.parse_output(output, scan_id, target)
+            for vuln in vulns:
+                existing = VulnerabilityDB.deduplicate(
+                    target, vuln["vuln_type"], vuln.get("parameter", "")
+                )
+                if not existing:
+                    VulnerabilityDB.create(**vuln)
+        except Exception as e:
+            logger.error(f"Failed to sync autosave to database: {e}")
+
     def get_all(self) -> List[Dict]:
         return list(self._data)
 

@@ -8,267 +8,292 @@ let socket = null;
 let currentScanId = null;
 
 function initWebSocket() {
-    socket = io();
+  socket = io();
 
-    socket.on('connect', () => {
-        console.log('[WebSocket] Connected');
-        showToast('WebSocket connected', 'success');
-    });
+  socket.on("connect", () => {
+    console.log("[WebSocket] Connected");
+    console.log("[WebSocket] Connected successfully");
+  });
 
-    socket.on('disconnect', () => {
-        console.log('[WebSocket] Disconnected');
-        showToast('WebSocket disconnected', 'warning');
-    });
+  socket.on("disconnect", () => {
+    console.log("[WebSocket] Disconnected");
+    console.log("[WebSocket] Disconnected from server");
+  });
 
-    socket.on('scan_output', (data) => {
-        if (data.scan_id === currentScanId) {
-            appendOutput(data.output);
-        }
-    });
+  socket.on("scan_output", (data) => {
+    if (data.scan_id === currentScanId) {
+      appendOutput(data.output);
+    }
+  });
 
-    socket.on('scan_status', (data) => {
-        if (data.scan_id === currentScanId) {
-            updateScanProgress(data.progress || 0, data.details || data.status);
-        }
-    });
+  socket.on("scan_status", (data) => {
+    if (data.scan_id === currentScanId) {
+      updateScanProgress(data.progress || 0, data.details || data.status);
+    }
+  });
 
-    socket.on('scan_complete', (data) => {
-        if (data.scan_id === currentScanId) {
-            updateScanProgress(100, `Complete - ${data.vulnerabilities} vulnerabilities found`);
-            showToast(`Scan complete: ${data.vulnerabilities} vulnerabilities`, data.success ? 'success' : 'error');
-            loadHistory();
-            loadVulnerabilities();
-        }
-    });
+  socket.on("scan_complete", (data) => {
+    if (data.scan_id === currentScanId) {
+      updateScanProgress(
+        100,
+        `Complete - ${data.vulnerabilities} vulnerabilities found`,
+      );
+      console.log("[Scan] Complete:", data);
+      loadHistory();
+      loadVulnerabilities();
+    }
+  });
 
-    socket.on('vulnerability_found', (data) => {
-        if (data.scan_id === currentScanId) {
-            showToast(`Vulnerability found: ${data.vulnerability.vuln_type}`, 'warning');
-            notifyVulnerability(data.vulnerability);
-        }
-    });
+  socket.on("vulnerability_found", (data) => {
+    if (data.scan_id === currentScanId) {
+      console.log("[Vulnerability] Found:", data.vulnerability);
+    }
+  });
 
-    socket.on('scan_error', (data) => {
-        if (data.scan_id === currentScanId) {
-            showToast(`Error: ${data.error}`, 'error');
-        }
-    });
+  socket.on("scan_error", (data) => {
+    if (data.scan_id === currentScanId) {
+      console.error("[Scan] Error:", data.error);
+    }
+  });
 }
 
 function joinScanRoom(scanId) {
-    currentScanId = scanId;
-    if (socket && socket.connected) {
-        socket.emit('join_scan', { scan_id: scanId });
-    }
+  currentScanId = scanId;
+  if (socket && socket.connected) {
+    socket.emit("join_scan", { scan_id: scanId });
+  }
 }
 
 function leaveScanRoom(scanId) {
-    if (socket && socket.connected) {
-        socket.emit('leave_scan', { scan_id: scanId });
-    }
-    currentScanId = null;
+  if (socket && socket.connected) {
+    socket.emit("leave_scan", { scan_id: scanId });
+  }
+  currentScanId = null;
 }
 
 // Templates
 async function loadTemplates() {
-    try {
-        const response = await fetch('/api/templates');
-        const data = await response.json();
+  try {
+    const response = await fetch("/api/templates");
+    const data = await response.json();
 
-        const container = document.getElementById('templates-list');
-        if (!data.templates || data.templates.length === 0) {
-            container.innerHTML = '<p class="text-muted">No templates available</p>';
-            return;
-        }
+    const container = document.getElementById("templates-list");
+    if (!data.templates || data.templates.length === 0) {
+      container.innerHTML = '<p class="text-muted">No templates available</p>';
+      return;
+    }
 
-        container.innerHTML = data.templates.map(template => `
-            <div class="template-card ${template.is_default ? 'default' : ''}">
+    container.innerHTML = data.templates
+      .map(
+        (template) => `
+            <div class="template-card ${template.is_default ? "default" : ""}">
                 <div class="template-header">
                     <h4>${template.name}</h4>
-                    ${template.is_default ? '<span class="badge badge-primary">Default</span>' : ''}
+                    ${template.is_default ? '<span class="badge badge-primary">Default</span>' : ""}
                 </div>
-                <p class="template-description">${template.description || ''}</p>
+                <p class="template-description">${template.description || ""}</p>
                 <div class="template-footer">
                     <button class="btn-small" onclick="useTemplate('${template.id}')">Use Template</button>
                     <button class="btn-icon" onclick="viewTemplateOptions('${template.id}')" title="View Options">&#128196;</button>
                 </div>
             </div>
-        `).join('');
-    } catch (error) {
-        console.error('Failed to load templates:', error);
-        showToast('Failed to load templates', 'error');
-    }
+        `,
+      )
+      .join("");
+  } catch (error) {
+    console.error("Failed to load templates:", error);
+    console.log("[Templates] Failed to load templates");
+  }
 }
 
 async function useTemplate(templateId) {
-    try {
-        const response = await fetch(`/api/templates/${templateId}/options`);
-        const data = await response.json();
+  try {
+    const response = await fetch(`/api/templates/${templateId}/options`);
+    const data = await response.json();
 
-        document.getElementById('custom-options').value = data.options_string;
-        document.querySelector('[data-tab="direct-scan"]').click();
-        showToast(`Template applied: ${data.options_string.substring(0, 50)}...`, 'success');
-    } catch (error) {
-        console.error('Failed to use template:', error);
-        showToast('Failed to apply template', 'error');
-    }
+    document.getElementById("custom-options").value = data.options_string;
+    document.querySelector('[data-tab="direct-scan"]').click();
+    console.log("[Template] Applied:", data.options_string.substring(0, 50));
+  } catch (error) {
+    console.error("Failed to use template:", error);
+    console.log("[Template] Failed to apply template");
+  }
 }
 
 async function viewTemplateOptions(templateId) {
-    try {
-        const response = await fetch(`/api/templates/${templateId}`);
-        const data = await response.json();
+  try {
+    const response = await fetch(`/api/templates/${templateId}`);
+    const data = await response.json();
 
-        alert(`Template: ${data.name}\\n\\nOptions: ${JSON.stringify(data.options, null, 2)}`);
-    } catch (error) {
-        console.error('Failed to view template:', error);
-    }
+    alert(
+      `Template: ${data.name}\\n\\nOptions: ${JSON.stringify(data.options, null, 2)}`,
+    );
+  } catch (error) {
+    console.error("Failed to view template:", error);
+  }
 }
 
 // Vulnerabilities
 async function loadVulnerabilities() {
-    const severity = document.getElementById('vuln-severity-filter').value;
-    const status = document.getElementById('vuln-status-filter').value;
+  const severity = document.getElementById("vuln-severity-filter").value;
+  const status = document.getElementById("vuln-status-filter").value;
 
-    try {
-        const params = new URLSearchParams();
-        if (severity) params.append('severity', severity);
-        if (status) params.append('status', status);
+  try {
+    const params = new URLSearchParams();
+    if (severity) params.append("severity", severity);
+    if (status) params.append("status", status);
 
-        const response = await fetch(`/api/vulnerabilities?${params}`);
-        const data = await response.json();
+    const response = await fetch(`/api/vulnerabilities?${params}`);
+    const data = await response.json();
 
-        const container = document.getElementById('vulnerabilities-list');
-        if (!data.vulnerabilities || data.vulnerabilities.length === 0) {
-            container.innerHTML = '<p class="text-muted">No vulnerabilities found</p>';
-            return;
-        }
+    const container = document.getElementById("vulnerabilities-list");
+    if (!data.vulnerabilities || data.vulnerabilities.length === 0) {
+      container.innerHTML =
+        '<p class="text-muted">No vulnerabilities found</p>';
+      return;
+    }
 
-        container.innerHTML = data.vulnerabilities.map(vuln => `
+    container.innerHTML = data.vulnerabilities
+      .map(
+        (vuln) => `
             <div class="vuln-card severity-${vuln.severity}">
                 <div class="vuln-header">
-                    <h4>${vuln.vuln_type.replace(/_/g, ' ').toUpperCase()}</h4>
+                    <h4>${vuln.vuln_type.replace(/_/g, " ").toUpperCase()}</h4>
                     <span class="severity-badge ${vuln.severity}">${vuln.severity}</span>
                 </div>
                 <div class="vuln-details">
-                    <p><strong>Parameter:</strong> ${vuln.parameter || 'N/A'}</p>
-                    <p><strong>Database:</strong> ${vuln.database_type || 'Unknown'}</p>
-                    <p><strong>OWASP:</strong> ${vuln.owasp_category || 'N/A'}</p>
-                    <p><strong>Description:</strong> ${vuln.description || 'N/A'}</p>
-                    ${vuln.payload ? `<p><strong>Payload:</strong> <code>${vuln.payload.substring(0, 100)}</code></p>` : ''}
+                    <p><strong>Parameter:</strong> ${vuln.parameter || "N/A"}</p>
+                    <p><strong>Database:</strong> ${vuln.database_type || "Unknown"}</p>
+                    <p><strong>OWASP:</strong> ${vuln.owasp_category || "N/A"}</p>
+                    <p><strong>Description:</strong> ${vuln.description || "N/A"}</p>
+                    ${vuln.payload ? `<p><strong>Payload:</strong> <code>${vuln.payload.substring(0, 100)}</code></p>` : ""}
                 </div>
                 <div class="vuln-actions">
                     <select onchange="updateVulnStatus(${vuln.id}, this.value)">
-                        <option value="new" ${vuln.status === 'new' ? 'selected' : ''}>New</option>
-                        <option value="confirmed" ${vuln.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-                        <option value="fixed" ${vuln.status === 'fixed' ? 'selected' : ''}>Fixed</option>
-                        <option value="ignored" ${vuln.status === 'ignored' ? 'selected' : ''}>Ignored</option>
+                        <option value="new" ${vuln.status === "new" ? "selected" : ""}>New</option>
+                        <option value="confirmed" ${vuln.status === "confirmed" ? "selected" : ""}>Confirmed</option>
+                        <option value="fixed" ${vuln.status === "fixed" ? "selected" : ""}>Fixed</option>
+                        <option value="ignored" ${vuln.status === "ignored" ? "selected" : ""}>Ignored</option>
                     </select>
                     <button class="btn-small" onclick="markFalsePositive(${vuln.id}, ${!vuln.false_positive})">
-                        ${vuln.false_positive ? 'Unmark FP' : 'Mark as False Positive'}
+                        ${vuln.false_positive ? "Unmark FP" : "Mark as False Positive"}
                     </button>
                 </div>
             </div>
-        `).join('');
-    } catch (error) {
-        console.error('Failed to load vulnerabilities:', error);
-        showToast('Failed to load vulnerabilities', 'error');
-    }
+        `,
+      )
+      .join("");
+  } catch (error) {
+    console.error("Failed to load vulnerabilities:", error);
+    console.log("[Vulnerabilities] Failed to load");
+  }
 }
 
 async function updateVulnStatus(vulnId, status) {
-    try {
-        await fetch(`/api/vulnerabilities/${vulnId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        showToast('Vulnerability status updated', 'success');
-        loadVulnerabilities();
-    } catch (error) {
-        console.error('Failed to update status:', error);
-        showToast('Failed to update status', 'error');
-    }
+  try {
+    await fetch(`/api/vulnerabilities/${vulnId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    console.log("[Vulnerability] Status updated");
+    loadVulnerabilities();
+  } catch (error) {
+    console.error("Failed to update status:", error);
+    console.log("[Vulnerability] Failed to update status");
+  }
 }
 
 async function markFalsePositive(vulnId, isFP) {
-    try {
-        await fetch(`/api/vulnerabilities/${vulnId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ false_positive: isFP })
-        });
-        showToast(isFP ? 'Marked as false positive' : 'Unmarked false positive', 'success');
-        loadVulnerabilities();
-    } catch (error) {
-        console.error('Failed to mark false positive:', error);
-        showToast('Failed to update', 'error');
-    }
+  try {
+    await fetch(`/api/vulnerabilities/${vulnId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ false_positive: isFP }),
+    });
+    console.log(
+      isFP
+        ? "[Vulnerability] Marked as false positive"
+        : "[Vulnerability] Unmarked false positive",
+    );
+    loadVulnerabilities();
+  } catch (error) {
+    console.error("Failed to mark false positive:", error);
+    console.log("[Vulnerability] Failed to update");
+  }
 }
 
 // Parameter Fuzzer
-document.getElementById('fuzzer-form')?.addEventListener('submit', async (e) => {
+document
+  .getElementById("fuzzer-form")
+  ?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const url = document.getElementById('fuzz-url').value;
-    const parameter = document.getElementById('fuzz-parameter').value;
-    const types = Array.from(document.querySelectorAll('#fuzzer-form input[type="checkbox"]:checked'))
-        .map(cb => cb.value);
+    const url = document.getElementById("fuzz-url").value;
+    const parameter = document.getElementById("fuzz-parameter").value;
+    const types = Array.from(
+      document.querySelectorAll('#fuzzer-form input[type="checkbox"]:checked'),
+    ).map((cb) => cb.value);
 
     if (types.length === 0) {
-        showToast('Select at least one fuzzing type', 'warning');
-        return;
+      console.log("[Fuzzer] Select at least one fuzzing type");
+      return;
     }
 
     try {
-        const response = await fetch('/api/fuzz/parameter', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, parameter, types })
-        });
+      const response = await fetch("/api/fuzz/parameter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, parameter, types }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        const container = document.getElementById('fuzz-results');
-        container.innerHTML = `
+      const container = document.getElementById("fuzz-results");
+      container.innerHTML = `
             <div class="fuzz-results-header">
                 <h4>Generated ${data.total} Fuzzed URLs</h4>
                 <button class="btn-small" onclick="exportFuzzResults()">Export</button>
             </div>
             <div class="fuzz-results-list">
-                ${data.fuzzed_urls.slice(0, 100).map((item, i) => `
+                ${data.fuzzed_urls
+                  .slice(0, 100)
+                  .map(
+                    (item, i) => `
                     <div class="fuzz-result-item">
                         <span class="fuzz-index">${i + 1}</span>
                         <span class="fuzz-category">${item.category}</span>
                         <code class="fuzz-url">${item.url}</code>
                         <button class="btn-icon" onclick="copyToClipboard('${item.url.replace(/'/g, "\\'")}')">&#128203;</button>
                     </div>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
             </div>
-            ${data.total > 100 ? `<p class="text-muted">Showing first 100 of ${data.total} results</p>` : ''}
+            ${data.total > 100 ? `<p class="text-muted">Showing first 100 of ${data.total} results</p>` : ""}
         `;
 
-        showToast(`Generated ${data.total} fuzzed URLs`, 'success');
+      console.log("[Fuzzer] Generated", data.total, "fuzzed URLs");
     } catch (error) {
-        console.error('Failed to generate fuzzing payloads:', error);
-        showToast('Failed to generate payloads', 'error');
+      console.error("Failed to generate fuzzing payloads:", error);
+      console.log("[Fuzzer] Failed to generate payloads");
     }
-});
+  });
 
 // Scan Queue
 async function loadQueue() {
-    try {
-        const response = await fetch('/api/queue');
-        const data = await response.json();
+  try {
+    const response = await fetch("/api/queue");
+    const data = await response.json();
 
-        const container = document.getElementById('queue-list');
-        const statsContainer = document.getElementById('queue-stats');
+    const container = document.getElementById("queue-list");
+    const statsContainer = document.getElementById("queue-stats");
 
-        const pending = data.queue.filter(q => q.status === 'pending').length;
-        const running = data.queue.filter(q => q.status === 'running').length;
-        const completed = data.queue.filter(q => q.status === 'completed').length;
+    const pending = data.queue.filter((q) => q.status === "pending").length;
+    const running = data.queue.filter((q) => q.status === "running").length;
+    const completed = data.queue.filter((q) => q.status === "completed").length;
 
-        statsContainer.innerHTML = `
+    statsContainer.innerHTML = `
             <div class="queue-stat-grid">
                 <div class="queue-stat">
                     <span class="stat-value">${pending}</span>
@@ -285,12 +310,14 @@ async function loadQueue() {
             </div>
         `;
 
-        if (!data.queue || data.queue.length === 0) {
-            container.innerHTML = '<p class="text-muted">Queue is empty</p>';
-            return;
-        }
+    if (!data.queue || data.queue.length === 0) {
+      container.innerHTML = '<p class="text-muted">Queue is empty</p>';
+      return;
+    }
 
-        container.innerHTML = data.queue.map(item => `
+    container.innerHTML = data.queue
+      .map(
+        (item) => `
             <div class="queue-item status-${item.status}">
                 <div class="queue-info">
                     <strong>Scan ID:</strong> ${item.scan_id}<br>
@@ -299,168 +326,213 @@ async function loadQueue() {
                     <strong>Retry:</strong> ${item.retry_count}/${item.max_retries}
                 </div>
                 <div class="queue-actions">
-                    ${item.status === 'pending' ? `<button class="btn-small" onclick="removeFromQueue(${item.id})">Remove</button>` : ''}
+                    ${item.status === "pending" ? `<button class="btn-small" onclick="removeFromQueue(${item.id})">Remove</button>` : ""}
                 </div>
             </div>
-        `).join('');
-    } catch (error) {
-        console.error('Failed to load queue:', error);
-        showToast('Failed to load queue', 'error');
-    }
+        `,
+      )
+      .join("");
+  } catch (error) {
+    console.error("Failed to load queue:", error);
+    console.log("[Queue] Failed to load");
+  }
 }
 
-document.getElementById('refresh-queue-btn')?.addEventListener('click', loadQueue);
+document
+  .getElementById("refresh-queue-btn")
+  ?.addEventListener("click", loadQueue);
 
 // Statistics Dashboard
 async function loadStatistics() {
-    try {
-        const response = await fetch('/api/statistics');
-        const data = await response.json();
+  const container = document.getElementById("stats-grid");
+  const chartsContainer = document.getElementById("stats-charts");
 
-        const container = document.getElementById('stats-grid');
-        container.innerHTML = `
+  // Show loading state
+  if (container) container.innerHTML = '<div class="stat-card"><div class="stat-label">Loading...</div></div>';
+  if (chartsContainer) chartsContainer.innerHTML = '';
+
+  try {
+    const response = await fetch("/api/statistics");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+
+    const totalScans = data.total_scans || 0;
+    const completedScans = data.completed_scans || 0;
+    const failedScans = data.failed_scans || 0;
+    const totalVulns = data.total_vulnerabilities || 0;
+    const criticalVulns = data.critical_vulns || 0;
+    const highVulns = data.high_vulns || 0;
+    const mediumVulns = data.medium_vulns || 0;
+    const lowVulns = data.low_vulns || 0;
+    const successRate = typeof data.scan_success_rate === 'number' ? data.scan_success_rate : 0;
+
+    if (container) {
+      container.innerHTML = `
             <div class="stat-card">
-                <div class="stat-value">${data.total_scans}</div>
+                <div class="stat-value">${totalScans}</div>
                 <div class="stat-label">Total Scans</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data.completed_scans}</div>
+                <div class="stat-value">${completedScans}</div>
                 <div class="stat-label">Completed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data.failed_scans}</div>
+                <div class="stat-value">${failedScans}</div>
                 <div class="stat-label">Failed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data.total_vulnerabilities}</div>
+                <div class="stat-value">${totalVulns}</div>
                 <div class="stat-label">Vulnerabilities</div>
             </div>
             <div class="stat-card severity-critical">
-                <div class="stat-value">${data.critical_vulns}</div>
+                <div class="stat-value">${criticalVulns}</div>
                 <div class="stat-label">Critical</div>
             </div>
             <div class="stat-card severity-high">
-                <div class="stat-value">${data.high_vulns}</div>
+                <div class="stat-value">${highVulns}</div>
                 <div class="stat-label">High</div>
             </div>
             <div class="stat-card severity-medium">
-                <div class="stat-value">${data.medium_vulns}</div>
+                <div class="stat-value">${mediumVulns}</div>
                 <div class="stat-label">Medium</div>
             </div>
             <div class="stat-card severity-low">
-                <div class="stat-value">${data.low_vulns}</div>
+                <div class="stat-value">${lowVulns}</div>
                 <div class="stat-label">Low</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">${data.scan_success_rate.toFixed(1)}%</div>
+                <div class="stat-value">${successRate.toFixed(1)}%</div>
                 <div class="stat-label">Success Rate</div>
             </div>
         `;
+    }
 
-        const chartsContainer = document.getElementById('stats-charts');
-        chartsContainer.innerHTML = `
+    if (chartsContainer) {
+      const vulnTypes = data.vuln_types || {};
+      const owaspCats = data.owasp_categories || {};
+      const dbTypes = data.database_types || {};
+
+      const vulnTypesMax = Object.values(vulnTypes).length > 0 ? Math.max(...Object.values(vulnTypes)) : 1;
+      const owaspMax = Object.values(owaspCats).length > 0 ? Math.max(...Object.values(owaspCats)) : 1;
+      const dbMax = Object.values(dbTypes).length > 0 ? Math.max(...Object.values(dbTypes)) : 1;
+
+      chartsContainer.innerHTML = `
             <div class="chart-section">
                 <h4>Vulnerability Types</h4>
                 <div class="chart-bars">
-                    ${Object.entries(data.vuln_types).map(([type, count]) => `
+                    ${Object.keys(vulnTypes).length === 0
+                      ? '<p class="text-muted">No vulnerability data yet</p>'
+                      : Object.entries(vulnTypes).map(([type, count]) => `
                         <div class="chart-bar">
-                            <span class="chart-label">${type.replace(/_/g, ' ')}</span>
-                            <div class="chart-bar-fill" style="width: ${(count / Math.max(...Object.values(data.vuln_types))) * 100}%"></div>
+                            <span class="chart-label">${type.replace(/_/g, " ")}</span>
+                            <div class="chart-bar-fill" style="width: ${(count / vulnTypesMax) * 100}%"></div>
                             <span class="chart-value">${count}</span>
                         </div>
-                    `).join('')}
+                    `).join("")}
                 </div>
             </div>
             <div class="chart-section">
                 <h4>OWASP Categories</h4>
                 <div class="chart-bars">
-                    ${Object.entries(data.owasp_categories).map(([cat, count]) => `
+                    ${Object.keys(owaspCats).length === 0
+                      ? '<p class="text-muted">No OWASP data yet</p>'
+                      : Object.entries(owaspCats).map(([cat, count]) => `
                         <div class="chart-bar">
                             <span class="chart-label">${cat}</span>
-                            <div class="chart-bar-fill" style="width: ${(count / Math.max(...Object.values(data.owasp_categories))) * 100}%"></div>
+                            <div class="chart-bar-fill" style="width: ${(count / owaspMax) * 100}%"></div>
                             <span class="chart-value">${count}</span>
                         </div>
-                    `).join('')}
+                    `).join("")}
+                </div>
+            </div>
+            <div class="chart-section">
+                <h4>Database Types</h4>
+                <div class="chart-bars">
+                    ${Object.keys(dbTypes).length === 0
+                      ? '<p class="text-muted">No database type data yet</p>'
+                      : Object.entries(dbTypes).map(([db, count]) => `
+                        <div class="chart-bar">
+                            <span class="chart-label">${db}</span>
+                            <div class="chart-bar-fill" style="width: ${(count / dbMax) * 100}%"></div>
+                            <span class="chart-value">${count}</span>
+                        </div>
+                    `).join("")}
                 </div>
             </div>
         `;
-    } catch (error) {
-        console.error('Failed to load statistics:', error);
-        showToast('Failed to load statistics', 'error');
     }
+  } catch (error) {
+    console.error("Failed to load statistics:", error);
+    if (container) {
+      container.innerHTML = `<div class="stat-card"><div class="stat-label" style="color:#ff6b6b;">Failed to load statistics. Check server.</div></div>`;
+    }
+    console.log("[Statistics] Failed to load");
+  }
 }
 
 // Utility Functions
-function notifyVulnerability(vuln) {
-    const notification = document.createElement('div');
-    notification.className = `vuln-notification severity-${vuln.severity}`;
-    notification.innerHTML = `
-        <strong>${vuln.vuln_type.replace(/_/g, ' ').toUpperCase()}</strong><br>
-        ${vuln.description || 'Vulnerability detected'}
-    `;
-    document.body.appendChild(notification);
-
-    setTimeout(() => notification.remove(), 5000);
-}
-
 function updateScanProgress(progress, text) {
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
+  const progressFill = document.getElementById("progress-fill");
+  const progressText = document.getElementById("progress-text");
 
-    if (progressFill) {
-        progressFill.style.width = `${progress}%`;
-    }
+  if (progressFill) {
+    progressFill.style.width = `${progress}%`;
+  }
 
-    if (progressText) {
-        progressText.textContent = text;
-    }
+  if (progressText) {
+    progressText.textContent = text;
+  }
 }
 
 function appendOutput(text) {
-    const output = document.getElementById('output');
-    if (output) {
-        output.textContent += text + '\\n';
-        output.scrollTop = output.scrollHeight;
-    }
+  const output = document.getElementById("output");
+  if (output) {
+    output.textContent += text + "\\n";
+    output.scrollTop = output.scrollHeight;
+  }
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Enhanced] Initializing new features...');
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("[Enhanced] Initializing new features...");
 
-    // Initialize WebSocket
-    initWebSocket();
+  // Initialize WebSocket
+  initWebSocket();
 
-    // Load data for new tabs
-    const observer = new MutationObserver(() => {
-        const activeTab = document.querySelector('.tab-content.active');
-        if (!activeTab) return;
+  // Load data for new tabs
+  const observer = new MutationObserver(() => {
+    const activeTab = document.querySelector(".tab-content.active");
+    if (!activeTab) return;
 
-        switch (activeTab.id) {
-            case 'templates':
-                loadTemplates();
-                break;
-            case 'vulnerabilities':
-                loadVulnerabilities();
-                break;
-            case 'queue':
-                loadQueue();
-                break;
-            case 'statistics':
-                loadStatistics();
-                break;
-        }
-    });
+    switch (activeTab.id) {
+      case "templates":
+        loadTemplates();
+        break;
+      case "vulnerabilities":
+        loadVulnerabilities();
+        break;
+      case "queue":
+        loadQueue();
+        break;
+      case "statistics":
+        loadStatistics();
+        break;
+    }
+  });
 
-    observer.observe(document.body, {
-        attributes: true,
-        attributeFilter: ['class'],
-        subtree: true
-    });
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+    subtree: true,
+  });
 
-    // Set up filter listeners
-    document.getElementById('vuln-severity-filter')?.addEventListener('change', loadVulnerabilities);
-    document.getElementById('vuln-status-filter')?.addEventListener('change', loadVulnerabilities);
+  // Set up filter listeners
+  document
+    .getElementById("vuln-severity-filter")
+    ?.addEventListener("change", loadVulnerabilities);
+  document
+    .getElementById("vuln-status-filter")
+    ?.addEventListener("change", loadVulnerabilities);
 
-    console.log('[Enhanced] Initialization complete');
+  console.log("[Enhanced] Initialization complete");
 });

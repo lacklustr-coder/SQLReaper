@@ -3,23 +3,23 @@ import json
 import logging
 import os
 import queue
-import re
 import shlex
-import shutil
 import subprocess
 import threading
-import time
 import uuid
 from datetime import datetime
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from enhancements import autosave, tray
-from flask import (  # pyright: ignore[reportMissingImports, reportUnknownVariableType]  # pyright: ignore[reportMissingImports], Response, send_file, session
+from flask import (
     Flask,
+    Response,
     jsonify,
     render_template,
     request,
+    send_file,
+    session,
 )
 from init_features import initialize_all_features
 from werkzeug.utils import secure_filename
@@ -146,21 +146,54 @@ def options_to_argv(options: Any) -> List[str]:
         return s.split()
 
 
-def resolve_sqlmap_cmd(path: str) -> str:
+def resolve_sqlmap_cmd(path: str) -> Optional[str]:
     """Resolve a valid path to sqlmap.py.
 
-    Handles the case where the user stores a directory path in settings instead
-    of the full path to sqlmap.py (e.g. 'C:/sqlmap' vs 'C:/sqlmap/sqlmap.py').
-    All other routes call ['python', sqlmap, ...] directly, so this helper
-    ensures the dork routes are consistent with that expectation.
+    If path is empty or invalid, auto-detects sqlmap from common locations.
+    Returns None if sqlmap cannot be found anywhere.
     """
-    if not path:
-        return path
-    if os.path.isdir(path):
-        candidate = os.path.join(path, "sqlmap.py")
-        if os.path.exists(candidate):
-            return candidate
-    return path
+    # If explicit path given, resolve directory -> sqlmap.py
+    if path:
+        if os.path.isdir(path):
+            candidate = os.path.join(path, "sqlmap.py")
+            if os.path.exists(candidate):
+                return candidate
+        if os.path.isfile(path):
+            return path
+
+    # Auto-detect: search common locations
+    _candidates = [
+        # Sibling directory of the app
+        os.path.join(os.path.dirname(__file__), "..", "sqlmap", "sqlmap.py"),
+        os.path.join(os.path.dirname(__file__), "..", "sqlmap.py"),
+        # Common Windows installs
+        r"C:\sqlmap\sqlmap.py",
+        r"C:\tools\sqlmap\sqlmap.py",
+        r"C:\Users\Public\sqlmap\sqlmap.py",
+        # PATH-based (shutil.which finds sqlmap or sqlmap.py on PATH)
+    ]
+    import shutil
+    sqlmap_on_path = shutil.which("sqlmap") or shutil.which("sqlmap.py")
+    if sqlmap_on_path:
+        return sqlmap_on_path
+    for c in _candidates:
+        normalized = os.path.normpath(c)
+        if os.path.isfile(normalized):
+            return normalized
+
+    # Return None if not found after all attempts
+    return None
+
+
+def _sqlmap_error():
+    """Return a JSON 503 response when sqlmap is not configured/found."""
+    return jsonify({
+        "error": (
+            "sqlmap.py not found. "
+            "Set the correct path in Settings (⚙ icon) or ensure sqlmap is installed "
+            "and on your system PATH."
+        )
+    }), 503
 
 
 def save_profile(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,6 +245,8 @@ def run_scan_process(cmd: List[str], scan_id: str, q: queue.Queue) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
             universal_newlines=True,
         )
@@ -247,23 +282,24 @@ def index():
 
 @app.route("/api/scan", methods=["POST"])
 def scan():
-    data = request.json or {}
-    target = data.get("target") or request.form.get("target")
-    if "options" in data:
-        options = data["options"]
-    else:
-        options = request.form.get("options", "") if request.form else ""
+    data = request.get_json() or {}
+    target = data.get("target")
+    if not target:
+        return jsonify({"error": "Target is required"}), 400
+    options = data.get("options", "")
     if not target:
         return jsonify({"error": "Target is required"}), 400
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
     cmd = ["python", sqlmap, "-u", target]
     cmd.extend(options_to_argv(options))
     if "--batch" not in cmd:
         cmd.append("--batch")
     tray.set_status("Running")
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
         output = result.stdout or ""
         status = "success" if result.returncode == 0 else "error"
         scan_id = str(uuid.uuid4())
@@ -271,7 +307,9 @@ def scan():
         with open(result_file, "w") as f:
             f.write(output)
         autosave.save(scan_id, target, output, status, result.returncode)
-        history = load_history()
+        history = load_history() or []
+        if history is None:
+            history = []
         history.insert(
             0,
             {
@@ -286,6 +324,17 @@ def scan():
         history = history[:100]
         save_history(history)
         tray.set_status(status.title())
+        if result.returncode != 0:
+            return jsonify(
+                {
+                    "output": output,
+                    "error": result.stderr or "Unknown error",
+                    "return_code": result.returncode,
+                    "scan_id": scan_id,
+                    "status": status,
+                }
+            ), 500
+
         return jsonify(
             {
                 "output": output,
@@ -308,13 +357,17 @@ def scan():
 
 @app.route("/api/scan/stream", methods=["POST"])
 def scan_stream():
-    data = request.json or {}
+    data = request.get_json() or {}
     target = data.get("target")
-    options = data.get("options") if "options" in data else ""
+    if not target:
+        return jsonify({"error": "Target is required"}), 400
+    options = data.get("options", "")
     if not target:
         return jsonify({"error": "Target is required"}), 400
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
     cmd = ["python", sqlmap, "-u", target]
     cmd.extend(options_to_argv(options))
     if "--batch" not in cmd:
@@ -374,12 +427,14 @@ def rerun_scan(scan_id):
         return jsonify({"error": "Cannot rerun"}), 400
     opts = options_to_argv(s.get("options")) if s.get("options") else []
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
     cmd = ["python", sqlmap, "-u", target] + opts
     if "--batch" not in cmd:
         cmd.append("--batch")
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=300)
         output = result.stdout or ""
         status = "success" if result.returncode == 0 else "error"
         sid = str(uuid.uuid4())
@@ -562,7 +617,9 @@ def batch_scan():
     if len(urls) > 50:
         return jsonify({"error": "Max 50 URLs"}), 400
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
     results = []
     for url in urls:
         cmd = ["python", sqlmap, "-u", url]
@@ -570,13 +627,14 @@ def batch_scan():
         if "--batch" not in cmd:
             cmd.append("--batch")
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+            out_str = r.stdout if r.returncode == 0 else (r.stderr or r.stdout)
             results.append(
                 {
                     "url": url,
                     "status": "success" if r.returncode == 0 else "error",
                     "return_code": r.returncode,
-                    "output": r.stdout[:2000],
+                    "output": out_str[:2000],
                 }
             )
         except subprocess.TimeoutExpired:
@@ -590,7 +648,9 @@ def batch_scan():
             f.write(
                 f"\n{'=' * 60}\nURL: {r['url']}\nStatus: {r['status']}\n{'=' * 60}\n{r['output']}\n"
             )
-    history = load_history()
+    history = load_history() or []
+    if history is None:
+        history = []
     history.insert(
         0,
         {
@@ -602,6 +662,13 @@ def batch_scan():
             "results": results,
         },
     )
+    # Save to SQLite DB for statistics
+    try:
+        summary_output = f"Batch scan completed. {len(results)} URLs processed."
+        autosave.save(bid, f"Batch ({len(urls)} URLs)", summary_output, "batch", 0)
+    except Exception as e:
+        logger.error(f"Batch autosave err: {e}")
+
     save_history(history)
     return jsonify({"batch_id": bid, "results": results, "total": len(results)})
 
@@ -623,6 +690,8 @@ def _run_dork_scan(scan_id: str, cmd: List[str], dork: str) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,  # merge stderr -> stdout for unified output
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
             universal_newlines=True,
         )
@@ -705,6 +774,11 @@ def _build_dork_cmd(sqlmap: str, dork: str, data: Dict[str, Any]) -> List[str]:
         cmd += ["--start-page", sp]
     aopt = data.get("additional_options", "")
     cmd.extend(options_to_argv(aopt))
+    
+    # Always append --random-agent to prevent Google from immediately blocking the default sqlmap User-Agent
+    if "--random-agent" not in cmd and "--user-agent" not in cmd:
+        cmd.append("--random-agent")
+        
     return cmd
 
 
@@ -728,6 +802,8 @@ def google_dork_scan():
 
     ss = load_settings()
     sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
 
     se = d.get("search_engine", "Google")
     if se != "Google":
@@ -807,6 +883,8 @@ def google_dork_scan_stream():
 
     ss = load_settings()
     sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
 
     se = d.get("search_engine", "Google")
     if se != "Google":
@@ -896,7 +974,9 @@ def google_dork_multi_scan():
             {"error": "Only Google search engine is supported for dorking."}
         ), 400
     ss = load_settings()
-    sqlmap = ss.get("sqlmap_path", SQLMAP_PATH)
+    sqlmap = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    if not sqlmap:
+        return _sqlmap_error()
     rl = d.get("results_limit", "10")
     ao = d.get("additional_options", "")
     results = []
@@ -906,6 +986,8 @@ def google_dork_multi_scan():
             cmd.append(f"--results={rl}")
         cmd.extend(options_to_argv(ao))
         cmd.extend(["--batch", "--flush-session"])
+        if "--random-agent" not in cmd and "--user-agent" not in cmd:
+            cmd.append("--random-agent")
         results.append({"dork": dork, "command": " ".join(cmd)})
     return jsonify({"scans": results, "total_dorks": len(dl)})
 
@@ -933,6 +1015,7 @@ def delete_profile(pid):
     return jsonify({"error": "Not found"}), 404
 
 
+
 @app.route("/api/stats")
 def get_stats():
     h = load_history()
@@ -944,6 +1027,91 @@ def get_stats():
             "batches": len([x for x in h if x.get("status") == "batch"]),
         }
     )
+
+
+def migrate_history_to_db():
+    """Backfill existing JSON scan history into SQLite for the Statistics Dashboard."""
+    try:
+        from database import ScanDB, VulnerabilityDB
+        from scan_executor import VulnerabilityParser
+
+        history = load_history()
+        migrated = 0
+        for item in history:
+            scan_id = item.get("id")
+            target = item.get("target", "unknown")
+            status_raw = item.get("status", "unknown")
+            return_code = item.get("return_code") or 0
+            timestamp = item.get("timestamp", datetime.now().isoformat())
+
+            if not scan_id:
+                continue
+
+            # Skip entries already in DB
+            if ScanDB.get(scan_id):
+                continue
+
+            # Map JSON statuses to DB statuses
+            if status_raw == "success":
+                db_status = "completed"
+            elif status_raw == "error":
+                db_status = "failed"
+            elif status_raw == "batch":
+                db_status = "completed"
+            elif status_raw == "running":
+                db_status = "failed"  # Running means it was interrupted
+            else:
+                db_status = status_raw
+
+            scan_type = "dork_scan" if str(target).startswith("Dork:") else \
+                        "batch_scan" if str(target).startswith("Batch") else "gui_scan"
+
+            # Create the scan record
+            with_id_scan = ScanDB.get(scan_id)
+            if not with_id_scan:
+                # Insert manually with the historical timestamp
+                from database import get_cursor
+                with get_cursor() as cursor:
+                    cursor.execute(
+                        """
+                        INSERT OR IGNORE INTO scans
+                        (id, target, scan_type, status, start_time, end_time, exit_code, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (scan_id, target, scan_type, db_status, timestamp, timestamp,
+                         return_code, timestamp, timestamp)
+                    )
+
+            # Try to parse output for vulns if result file exists
+            rf = os.path.join(app.config["RESULTS_FOLDER"], f"{scan_id}.txt")
+            if os.path.exists(rf):
+                try:
+                    with open(rf, "r", encoding="utf-8", errors="replace") as f:
+                        output = f.read()
+                    vulns = VulnerabilityParser.parse_output(output, scan_id, target)
+                    for vuln in vulns:
+                        existing = VulnerabilityDB.deduplicate(
+                            target, vuln["vuln_type"], vuln.get("parameter", "")
+                        )
+                        if not existing:
+                            VulnerabilityDB.create(**vuln)
+                except Exception:
+                    pass
+
+            migrated += 1
+
+        logger.info(f"History migration: {migrated}/{len(history)} entries synced to DB")
+        return migrated
+    except Exception as e:
+        logger.error(f"History migration failed: {e}")
+        return 0
+
+
+@app.route("/api/migrate-history", methods=["POST"])
+def migrate_history_endpoint():
+    """Manually trigger migration of JSON history to SQLite DB."""
+    migrated = migrate_history_to_db()
+    return jsonify({"message": f"Migrated {migrated} entries to database"})
 
 
 SETTINGS_FILE = os.path.join(app.config["RESULTS_FOLDER"], "settings.json")
@@ -1010,8 +1178,8 @@ def get_creds():
 @app.route("/api/health")
 def health_check():
     ss = load_settings()
-    path = ss.get("sqlmap_path", SQLMAP_PATH)
-    ok = os.path.exists(path)
+    path = resolve_sqlmap_cmd(ss.get("sqlmap_path", SQLMAP_PATH))
+    ok = path is not None
     return jsonify(
         {
             "status": "healthy" if ok else "degraded",
@@ -1031,6 +1199,8 @@ if __name__ == "__main__":
     print("=" * 60 + "\n")
     tray.start()
     tray.register("show", lambda: None)
+    # Backfill existing JSON history into SQLite on startup (runs in background)
+    threading.Thread(target=migrate_history_to_db, daemon=True).start()
     try:
         socketio.run(
             app, debug=True, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True

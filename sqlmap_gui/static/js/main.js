@@ -60,29 +60,6 @@
       .join(" ");
   }
 
-  function toast(m, t) {
-    var c = $("#toast-container");
-    if (!c) return;
-    var d = document.createElement("div");
-    var color =
-      t === "success"
-        ? "#00ff44"
-        : t === "error"
-          ? "#ff3333"
-          : t === "warning"
-            ? "#ffaa00"
-            : "#00aaff";
-    d.style.cssText =
-      "padding:10px 16px;border-radius:6px;color:#fff;font-size:.85em;max-width:300px;border-left:3px solid " +
-      color +
-      ";background:rgba(0,0,0,.85);animation:toastIn .3s,toastOut .3s 2.7s forwards;";
-    d.textContent = m;
-    c.appendChild(d);
-    setTimeout(function () {
-      if (d.parentNode) d.parentNode.removeChild(d);
-    }, 3000);
-  }
-
   function appendMsg(t, c) {
     if (!output) return;
     var line = c ? '<span class="' + c + '">' + esc(t) + "</span>" : esc(t);
@@ -138,11 +115,11 @@
               }),
             })
               .then(function () {
-                toast("Saved", "success");
+                console.log("Saved");
                 closeModal("settings-modal");
               })
               .catch(function (e) {
-                toast("Failed: " + e.message, "error");
+                console.error("Failed: " + e.message);
               });
           };
       })
@@ -357,7 +334,7 @@
               }).then(function () {
                 loadHistory();
                 stats();
-                toast("Deleted", "success");
+                console.log("Deleted");
               });
             });
           });
@@ -371,10 +348,10 @@
         .then(function (d) {
           appendMsg("\n[i] History: " + id, "term-info");
           appendMsg(d.output || "No output");
-          toast("Loaded", "success");
+          console.log("Loaded");
         })
         .catch(function (e) {
-          toast("Failed: " + e.message, "error");
+          console.error("Failed: " + e.message);
         });
     }
 
@@ -383,7 +360,7 @@
       api("/api/history/clear", { method: "POST" }).then(function () {
         loadHistory();
         stats();
-        toast("Cleared", "success");
+        console.log("Cleared");
       });
     });
 
@@ -449,7 +426,7 @@
         if (!target) return;
         var tv = target.value.trim();
         if (!tv) {
-          toast("Enter target URL", "warning");
+          console.log("Enter target URL");
           return;
         }
         scanning = true;
@@ -470,7 +447,7 @@
             appendMsg(d.output || "Scan complete", "term-success");
             setProgress(100, "Complete");
             currentScanId = d.scan_id;
-            toast("Scan done", "success");
+            console.log("Scan done");
             if (si) si.className = "status-indicator status-success";
             loadHistory();
             stats();
@@ -478,7 +455,7 @@
           .catch(function (err) {
             appendMsg("Error: " + err.message, "term-error");
             setProgress(0, "Error");
-            toast(err.message, "error");
+            console.error(err.message);
             if (si) si.className = "status-indicator status-error";
           })
           .finally(function () {
@@ -519,7 +496,7 @@
       if (!ba) return;
       var txt = ba.value.trim();
       if (!txt) {
-        toast("Enter URLs", "warning");
+        console.log("Enter URLs");
         return;
       }
       var urls = txt
@@ -532,7 +509,7 @@
           return u.trim();
         });
       if (!urls.length) {
-        toast("No valid URLs", "warning");
+        console.log("No valid URLs");
         return;
       }
       var btn = $("#batch-scan-btn");
@@ -568,12 +545,12 @@
                 );
               })
               .join("");
-          toast("Batch complete", "success");
+          console.log("Batch complete");
           loadHistory();
           stats();
         })
         .catch(function (err) {
-          toast(err.message, "error");
+          console.error(err.message);
         })
         .finally(function () {
           var btn2 = $("#batch-scan-btn");
@@ -596,7 +573,7 @@
         if (!dq) return;
         var dork = dq.value.trim();
         if (!dork) {
-          toast("Enter a dork", "warning");
+          console.log("Enter a dork");
           return;
         }
 
@@ -679,9 +656,8 @@
                         );
                       }
                       if (di) di.className = "status-indicator status-error";
-                      toast(
+                      console.error(
                         "Dork scan failed (exit " + p.return_code + ")",
-                        "error",
                       );
                     } else {
                       if (!lastLineCount) {
@@ -691,7 +667,7 @@
                         );
                       }
                       if (di) di.className = "status-indicator status-success";
-                      toast("Dork scan complete", "success");
+                      console.log("Dork scan complete");
                     }
 
                     loadHistory();
@@ -713,7 +689,7 @@
             // Failed to even start the scan
             appendMsg("[!] Error: " + err.message, "term-error");
             if (di) di.className = "status-indicator status-error";
-            toast(err.message, "error");
+            console.error(err.message);
             var btn2 = $("#dork-scan-btn");
             if (btn2) btn2.disabled = false;
           });
@@ -732,10 +708,10 @@
         navigator.clipboard
           .writeText(dork)
           .then(function () {
-            toast("Copied & applied", "success");
+            console.log("Copied & applied");
           })
           .catch(function () {
-            toast("Applied", "info");
+            console.log("Applied");
           });
       });
     });
@@ -747,7 +723,7 @@
       if (!md) return;
       var txt = md.value.trim();
       if (!txt) {
-        toast("Enter dorks", "warning");
+        console.log("Enter dorks");
         return;
       }
       api("/api/google-dork-multi", {
@@ -785,15 +761,15 @@
                 navigator.clipboard
                   .writeText(cb.getAttribute("data-clip"))
                   .then(function () {
-                    toast("Copied", "success");
+                    console.log("Copied");
                   });
               });
             },
           );
-          toast("Generated", "success");
+          console.log("Generated");
         })
         .catch(function (err) {
-          toast(err.message, "error");
+          console.error(err.message);
         });
     });
     bind("multi-clear-btn", "click", function () {
@@ -849,7 +825,7 @@
           if (dorkTab) {
             dorkTab.click();
           }
-          toast("Dork applied to Google Dorking tab", "success");
+          console.log("Dork applied to Google Dorking tab");
         }
       });
 
@@ -862,10 +838,10 @@
           navigator.clipboard
             .writeText(dorkValue)
             .then(function () {
-              toast("Copied to clipboard", "success");
+              console.log("Copied to clipboard");
             })
             .catch(function () {
-              toast("Failed to copy", "error");
+              console.log("Failed to copy");
             });
         });
       }
@@ -878,7 +854,7 @@
         e.preventDefault();
         var pn = $("#profile-name");
         if (!pn || !pn.value.trim()) {
-          toast("Enter name", "warning");
+          console.log("Enter name");
           return;
         }
         api("/api/profiles", {
@@ -889,14 +865,14 @@
           }),
         })
           .then(function () {
-            toast("Saved", "success");
+            console.log("Saved");
             pn.value = "";
             var po = $("#profile-options");
             if (po) po.value = "";
             loadProfiles();
           })
           .catch(function (err) {
-            toast(err.message, "error");
+            console.error(err.message);
           });
       });
     }
@@ -933,7 +909,7 @@
               if (p) {
                 var co = $("#custom-options");
                 if (co) co.value = argvToShellLine(p.options);
-                toast("Loaded", "success");
+                console.log("Loaded");
               }
             });
           });
@@ -943,7 +919,7 @@
             api("/api/profiles/" + b.getAttribute("data-del"), {
               method: "DELETE",
             }).then(function () {
-              toast("Deleted", "success");
+              console.log("Deleted");
               loadProfiles();
             });
           });
@@ -956,7 +932,7 @@
     bind("modal-save-profile", "click", function () {
       var mn = $("#modal-profile-name");
       if (!mn || !mn.value.trim()) {
-        toast("Enter name", "warning");
+        console.log("Enter name");
         return;
       }
       api("/api/profiles", {
@@ -964,13 +940,13 @@
         body: JSON.stringify({ name: mn.value.trim(), options: buildOpts() }),
       })
         .then(function () {
-          toast("Saved", "success");
+          console.log("Saved");
           closeModal("save-profile-modal");
           mn.value = "";
           loadProfiles();
         })
         .catch(function (err) {
-          toast(err.message, "error");
+          console.error(err.message);
         });
     });
 
@@ -980,7 +956,7 @@
         var fmt = b.getAttribute("data-format");
         var txt = output ? output.textContent : "";
         if (!txt) {
-          toast("No output", "warning");
+          console.log("No output");
           return;
         }
         api("/api/export", {
@@ -993,11 +969,11 @@
         })
           .then(function (d) {
             window.open(API + d.download_url, "_blank");
-            toast("Exported " + fmt, "success");
+            console.log("Exported " + fmt);
             closeModal("export-modal");
           })
           .catch(function (e) {
-            toast("Export failed", "error");
+            console.log("Export failed");
           });
       });
     });
@@ -1006,16 +982,16 @@
     bind("copy-output-btn", "click", function () {
       var txt = output ? output.textContent : "";
       if (!txt) {
-        toast("Nothing", "warning");
+        console.log("Nothing");
         return;
       }
       navigator.clipboard
         .writeText(txt)
         .then(function () {
-          toast("Copied", "success");
+          console.log("Copied");
         })
         .catch(function () {
-          toast("Copy failed", "error");
+          console.log("Copy failed");
         });
     });
 
@@ -1057,7 +1033,7 @@
             $("#target").value = d.parsed.url;
             appendMsg("[+] URL: " + d.parsed.url, "term-info");
           }
-          toast("Uploaded", "success");
+          console.log("Uploaded");
         })
         .catch(function (e) {
           appendMsg("[-] " + e.message, "term-error");
